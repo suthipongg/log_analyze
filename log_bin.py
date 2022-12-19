@@ -61,7 +61,7 @@ class check_type(read_binary):
 
 
 if __name__ == "__main__":
-    path = r"C:\Users\Lenovo\Desktop\log_bin\Drone30LOutOfControl.bin"
+    path = r"Drone30LOutOfControl.bin"
     type_check = ["battery", "Gps"]
     status = check_type(path, type_check)
     status.show()

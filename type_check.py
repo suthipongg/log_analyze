@@ -10,8 +10,8 @@ class check_status(object):
         return self.data[msg]['Values'][:, col_index].flatten()
 
     def battery(self):
-
-        return f"battery ok {self.pull_data('AGRI', 'timestamp')[:10]}"
+        timestamp = self.pull_data('AGRI', 'timestamp')
+        return f"battery ok {timestamp[:10]}"
 
     def gps(self):
 
