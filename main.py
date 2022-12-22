@@ -3,40 +3,33 @@ from pathlib import Path
 import argparse
 import numpy as np
 from Reader import DFReader
-from analyze import analyze
+import analyze
 
 
-class read_binary(analyze):
+class read_binary(analyze.analyzer):
     def __init__(self, path, modules_check):
-        analyze.__init__(self)
-        
         self.path = path
         self.modules_check = modules_check
         self.mlog = DFReader.DFReader_binary(self.path)
         self.match_types = list(self.mlog.name_to_id.keys())
         self.match_types.sort()
-
         self.dataframe = {}
-
 
     def all_msgs(self):
         all_use_msgs = set()
-        
         for module in self.modules_check:
-            if module not in list(self.ls_msg_from_type.keys()):
-                print(module, "module not found")
-                sys.exit()
+            try:
+                msg = analyze.ls_msg_from_type[module]
+            except:
+                print(module, "module not in dictionary module:messages")
                 
-            msg = self.ls_msg_from_type[module]
             all_use_msgs = all_use_msgs.union(set(msg))
-            
         return all_use_msgs
     
-    
     def read_bin(self):
+        msgs = self.all_msgs()
         while True:
-            m = self.mlog.recv_match(type=self.all_msgs())
-            
+            m = self.mlog.recv_match(type=msgs)
             if m is None:
                 break
             
@@ -52,9 +45,8 @@ class read_binary(analyze):
                 self.dataframe[m_type]['Values'][-1] = list(data_timestamp.values())
             else:
                 self.dataframe[m_type]['Values'].append(list(data_timestamp.values()))
-
             last_timestamp = timestamp
-            
+
         for msg in self.dataframe.keys():
             self.dataframe[msg]['Values'] = np.array(self.dataframe[msg]['Values'])
 
@@ -63,7 +55,6 @@ class check_type(read_binary):
     def __init__(self, path, model="ALL"):
         read_binary.__init__(self, path, type_model(model))
         self.read_bin()
-
 
     def show(self):
         ls = []

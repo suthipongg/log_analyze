@@ -1,13 +1,12 @@
 import numpy as np
-from module import battery, gps
+import importlib
 
 
-class analyze:
-    def __init__(self):
-        self.ls_msg_from_type = {"battery" : ['AGRI', 'VIBE', 'RATE'], 
+ls_msg_from_type = {"battery" : ['AGRI', 'VIBE', 'RATE'], 
                                  "gps" : ["ATT", "IMU"]}
 
 
+class analyzer:
     def pull_data(self, msg, column_name):
         col_index = []
         for col_name in np.array(column_name, ndmin=1):
@@ -15,11 +14,9 @@ class analyze:
             col_index.append(index)
         return self.dataframe[msg]['Values'][:, col_index]
 
-
     def analyze_module(self, module):
-        if module == "battery": 
-            return battery.analyze(self)
-        elif module == "gps": 
-            return gps.analyze(self)
-        else: 
-            return module + " type not found"
+        try:
+            mod = importlib.import_module("modules." + module)
+            return mod.analyze(self)
+        except: 
+            return module + " library not exist"
