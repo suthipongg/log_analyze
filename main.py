@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 import argparse
 import numpy as np
-from pymavlink import DFReader
+from Reader import DFReader
 from analyze import analyze
 
 
@@ -82,8 +82,8 @@ def type_model(model):
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, help='path log file')
-    parser.add_argument('--model', type=str, default="ALL" , help='model drone')
+    parser.add_argument('-p', '--path', type=str, help='path log file')
+    parser.add_argument('-m', '--model', type=str, default="ALL" , help='model drone')
     opt = parser.parse_args()
     return opt
 

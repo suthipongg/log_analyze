@@ -1,0 +1,3 @@
+PROTOCOL_0_9 = "0.9"
+PROTOCOL_1_0 = "1.0"
+PROTOCOL_2_0 = "2.0"
