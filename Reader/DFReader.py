@@ -7,6 +7,32 @@ import math
 from . import mavutil
 
 
+long = int
+
+FORMAT_TO_STRUCT = {
+    "a": ("64s", None, str),
+    "b": ("b", None, int),
+    "B": ("B", None, int),
+    "h": ("h", None, int),
+    "H": ("H", None, int),
+    "i": ("i", None, int),
+    "I": ("I", None, int),
+    "f": ("f", None, float),
+    "n": ("4s", None, str),
+    "N": ("16s", None, str),
+    "Z": ("64s", None, str),
+    "c": ("h", 0.01, float),
+    "C": ("H", 0.01, float),
+    "e": ("i", 0.01, float),
+    "E": ("I", 0.01, float),
+    "L": ("i", 1.0e-7, float),
+    "d": ("d", None, float),
+    "M": ("b", None, int),
+    "q": ("q", None, long),  # Backward compat
+    "Q": ("Q", None, long),  # Backward compat
+    }
+
+
 class DFReaderClock(object):
     '''base class for all the different ways we count time in logs'''
 
@@ -187,6 +213,255 @@ class DFReaderClock_gps_interpolated(DFReaderClock):
             rate = 50
         count = self.counts_since_gps.get(m.fmt.name, 0)
         m._timestamp = self.timebase + count/rate
+
+
+def to_string(s):
+    '''desperate attempt to convert a string regardless of what garbage we get'''
+    try:
+        return s.decode("utf-8")
+    except Exception as e:
+        pass
+    try:
+        s2 = s.encode('utf-8', 'ignore')
+        x = u"%s" % s2
+        return s2
+    except Exception:
+        pass
+    # so it's a nasty one. Let's grab as many characters as we can
+    r = ''
+    while s != '':
+        try:
+            r2 = r + s[0]
+            s = s[1:]
+            r2 = r2.encode('ascii', 'ignore')
+            x = u"%s" % r2
+            r = r2
+        except Exception:
+            break
+    return r + '_XXX'
+    
+
+def null_term(str):
+    '''null terminate a string'''
+    if isinstance(str, bytes):
+        str = to_string(str)
+    idx = str.find("\0")
+    if idx != -1:
+        str = str[:idx]
+    return str
+
+
+def u_ord(c):
+	return ord(c) if sys.version_info.major < 3 else c
+
+
+class DFMessage(object):
+    def __init__(self, fmt, elements, apply_multiplier, parent):
+        self.fmt = fmt
+        self._elements = elements
+        self._apply_multiplier = apply_multiplier
+        self._fieldnames = fmt.columns
+        self._parent = parent
+
+    def to_dict(self):
+        d = {'mavpackettype': self.fmt.name}
+
+        for field in self._fieldnames:
+            d[field] = self.__getattr__(field)
+
+        return d
+
+    def __getattr__(self, field):
+        '''override field getter'''
+        try:
+            i = self.fmt.colhash[field]
+        except Exception:
+            raise AttributeError(field)
+        if self.fmt.msg_fmts[i] == 'Z' and self.fmt.name == 'FILE':
+            # special case for FILE contens as bytes
+            return self._elements[i]
+        if isinstance(self._elements[i], bytes):
+            try:
+                v = self._elements[i].decode("utf-8")
+            except UnicodeDecodeError:
+                # try western europe
+                v = self._elements[i].decode("ISO-8859-1")
+        else:
+            v = self._elements[i]
+        if self.fmt.format[i] == 'a':
+            pass
+        elif self.fmt.format[i] != 'M' or self._apply_multiplier:
+            v = self.fmt.msg_types[i](v)
+        if self.fmt.msg_types[i] == str:
+            v = null_term(v)
+        if self.fmt.msg_mults[i] is not None and self._apply_multiplier:
+            v *= self.fmt.msg_mults[i]
+        return v
+
+    def __setattr__(self, field, value):
+        '''override field setter'''
+        if not field[0].isupper() or not field in self.fmt.colhash:
+            super(DFMessage,self).__setattr__(field, value)
+        else:
+            i = self.fmt.colhash[field]
+            if self.fmt.msg_mults[i] is not None and self._apply_multiplier:
+                value /= self.fmt.msg_mults[i]
+            self._elements[i] = value
+
+    def get_type(self):
+        return self.fmt.name
+
+    def __str__(self):
+        is_py3 = sys.version_info >= (3,0)
+        ret = "%s {" % self.fmt.name
+        col_count = 0
+        for c in self.fmt.columns:
+            val = self.__getattr__(c)
+            if isinstance(val, float) and math.isnan(val):
+                # quiet nans have more non-zero values:
+                if is_py3:
+                    noisy_nan = bytearray([0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
+                else:
+                    noisy_nan = "\x7f\xf8\x00\x00\x00\x00\x00\x00"
+                if struct.pack(">d", val) != noisy_nan:
+                    val = "qnan"
+
+            if is_py3:
+                ret += "%s : %s, " % (c, val)
+            else:
+                try:
+                    ret += "%s : %s, " % (c, val)
+                except UnicodeDecodeError:
+                    ret += "%s : %s, " % (c, to_string(val))
+            col_count += 1
+        if col_count != 0:
+            ret = ret[:-2]
+        return ret + '}'
+
+    def get_msgbuf(self):
+        '''create a binary message buffer for a message'''
+        values = []
+        is_py2 = sys.version_info < (3,0)
+        for i in range(len(self.fmt.columns)):
+            if i >= len(self.fmt.msg_mults):
+                continue
+            mul = self.fmt.msg_mults[i]
+            name = self.fmt.columns[i]
+            if name == 'Mode' and 'ModeNum' in self.fmt.columns:
+                name = 'ModeNum'
+            v = self.__getattr__(name)
+
+            if isinstance(v,str):
+                try:
+                    v = bytes(v,'ascii')
+                except UnicodeEncodeError:
+                    v = v.encode()
+            elif isinstance(v, array.array):
+                v = v.tobytes()
+                
+            if mul is not None:
+                v /= mul
+                v = int(round(v))
+            values.append(v)
+
+        ret1 = struct.pack("BBB", 0xA3, 0x95, self.fmt.type)
+        try:
+            ret2 = struct.pack(self.fmt.msg_struct, *values)
+        except Exception as ex:
+            return None
+        return ret1 + ret2
+
+    def get_fieldnames(self):
+        return self._fieldnames
+
+    def __getitem__(self, key):
+        '''support indexing, allowing for multi-instance sensors in one message'''
+        if self.fmt.instance_field is None:
+            raise IndexError()
+        k = '%s[%s]' % (self.fmt.name, str(key))
+        if not k in self._parent.messages:
+            raise IndexError()
+        return self._parent.messages[k]
+
+
+class DFFormat(object):
+    def __init__(self, type, name, flen, format, columns, oldfmt=None):
+        self.type = type
+        self.name = null_term(name)
+        self.len = flen
+        self.format = format
+        self.columns = columns.split(',')
+        self.instance_field = None
+        self.unit_ids = None
+        self.mult_ids = None
+
+        if self.columns == ['']:
+            self.columns = []
+
+        msg_struct = "<"
+        msg_mults = []
+        msg_types = []
+        msg_fmts = []
+        for c in format:
+            if u_ord(c) == 0:
+                break
+            try:
+                msg_fmts.append(c)
+                (s, mul, type) = FORMAT_TO_STRUCT[c]
+                msg_struct += s
+                msg_mults.append(mul)
+                if c == "a":
+                    msg_types.append(array.array)
+                else:
+                    msg_types.append(type)
+            except KeyError as e:
+                print("DFFormat: Unsupported format char: '%s' in message %s" %
+                      (c, name))
+                raise Exception("Unsupported format char: '%s' in message %s" %
+                                (c, name))
+
+        self.msg_struct = msg_struct
+        self.msg_types = msg_types
+        self.msg_mults = msg_mults
+        self.msg_fmts = msg_fmts
+        self.colhash = {}
+        for i in range(len(self.columns)):
+            self.colhash[self.columns[i]] = i
+        self.a_indexes = []
+        for i in range(0, len(self.msg_fmts)):
+            if self.msg_fmts[i] == 'a':
+                self.a_indexes.append(i)
+
+        if oldfmt is not None:
+            self.set_unit_ids(oldfmt.unit_ids)
+            self.set_mult_ids(oldfmt.mult_ids)
+
+    def set_unit_ids(self, unit_ids):
+        '''set unit IDs string from FMTU'''
+        if unit_ids is None:
+            return
+        self.unit_ids = unit_ids
+        instance_idx = unit_ids.find('#')
+        if instance_idx != -1:
+            self.instance_field = self.columns[instance_idx]
+            # work out offset and length of instance field in message
+            pre_fmt = self.format[:instance_idx]
+            pre_sfmt = ""
+            for c in pre_fmt:
+                (s, mul, type) = FORMAT_TO_STRUCT[c]
+                pre_sfmt += s
+            self.instance_ofs = struct.calcsize(pre_sfmt)
+            (ifmt,) = self.format[instance_idx]
+            self.instance_len = struct.calcsize(ifmt)
+
+
+    def set_mult_ids(self, mult_ids):
+        '''set mult IDs string from FMTU'''
+        self.mult_ids = mult_ids
+            
+    def __str__(self):
+        return ("DFFormat(%s,%s,%s,%s)" %
+                (self.type, self.name, self.format, self.columns))
 
 
 class DFReader(object):
@@ -432,6 +707,7 @@ class DFReader(object):
 
         self._rewind()
         return self._flightmodes
+
 
 class DFReader_binary(DFReader):
     '''parse a binary dataflash file'''
@@ -743,279 +1019,3 @@ class DFReader_binary(DFReader):
         self.percent = 100.0 * (self.offset / float(self.data_len))
 
         return m
-
-
-class DFFormat(object):
-    def __init__(self, type, name, flen, format, columns, oldfmt=None):
-        self.type = type
-        self.name = null_term(name)
-        self.len = flen
-        self.format = format
-        self.columns = columns.split(',')
-        self.instance_field = None
-        self.unit_ids = None
-        self.mult_ids = None
-
-        if self.columns == ['']:
-            self.columns = []
-
-        msg_struct = "<"
-        msg_mults = []
-        msg_types = []
-        msg_fmts = []
-        for c in format:
-            if u_ord(c) == 0:
-                break
-            try:
-                msg_fmts.append(c)
-                (s, mul, type) = FORMAT_TO_STRUCT[c]
-                msg_struct += s
-                msg_mults.append(mul)
-                if c == "a":
-                    msg_types.append(array.array)
-                else:
-                    msg_types.append(type)
-            except KeyError as e:
-                print("DFFormat: Unsupported format char: '%s' in message %s" %
-                      (c, name))
-                raise Exception("Unsupported format char: '%s' in message %s" %
-                                (c, name))
-
-        self.msg_struct = msg_struct
-        self.msg_types = msg_types
-        self.msg_mults = msg_mults
-        self.msg_fmts = msg_fmts
-        self.colhash = {}
-        for i in range(len(self.columns)):
-            self.colhash[self.columns[i]] = i
-        self.a_indexes = []
-        for i in range(0, len(self.msg_fmts)):
-            if self.msg_fmts[i] == 'a':
-                self.a_indexes.append(i)
-
-        if oldfmt is not None:
-            self.set_unit_ids(oldfmt.unit_ids)
-            self.set_mult_ids(oldfmt.mult_ids)
-
-    def set_unit_ids(self, unit_ids):
-        '''set unit IDs string from FMTU'''
-        if unit_ids is None:
-            return
-        self.unit_ids = unit_ids
-        instance_idx = unit_ids.find('#')
-        if instance_idx != -1:
-            self.instance_field = self.columns[instance_idx]
-            # work out offset and length of instance field in message
-            pre_fmt = self.format[:instance_idx]
-            pre_sfmt = ""
-            for c in pre_fmt:
-                (s, mul, type) = FORMAT_TO_STRUCT[c]
-                pre_sfmt += s
-            self.instance_ofs = struct.calcsize(pre_sfmt)
-            (ifmt,) = self.format[instance_idx]
-            self.instance_len = struct.calcsize(ifmt)
-
-
-    def set_mult_ids(self, mult_ids):
-        '''set mult IDs string from FMTU'''
-        self.mult_ids = mult_ids
-            
-    def __str__(self):
-        return ("DFFormat(%s,%s,%s,%s)" %
-                (self.type, self.name, self.format, self.columns))
-
-
-def null_term(str):
-    '''null terminate a string'''
-    if isinstance(str, bytes):
-        str = to_string(str)
-    idx = str.find("\0")
-    if idx != -1:
-        str = str[:idx]
-    return str
-
-
-def to_string(s):
-    '''desperate attempt to convert a string regardless of what garbage we get'''
-    try:
-        return s.decode("utf-8")
-    except Exception as e:
-        pass
-    try:
-        s2 = s.encode('utf-8', 'ignore')
-        x = u"%s" % s2
-        return s2
-    except Exception:
-        pass
-    # so it's a nasty one. Let's grab as many characters as we can
-    r = ''
-    while s != '':
-        try:
-            r2 = r + s[0]
-            s = s[1:]
-            r2 = r2.encode('ascii', 'ignore')
-            x = u"%s" % r2
-            r = r2
-        except Exception:
-            break
-    return r + '_XXX'
-    
-    
-def u_ord(c):
-	return ord(c) if sys.version_info.major < 3 else c
-
-
-long = int
-
-
-FORMAT_TO_STRUCT = {
-    "a": ("64s", None, str),
-    "b": ("b", None, int),
-    "B": ("B", None, int),
-    "h": ("h", None, int),
-    "H": ("H", None, int),
-    "i": ("i", None, int),
-    "I": ("I", None, int),
-    "f": ("f", None, float),
-    "n": ("4s", None, str),
-    "N": ("16s", None, str),
-    "Z": ("64s", None, str),
-    "c": ("h", 0.01, float),
-    "C": ("H", 0.01, float),
-    "e": ("i", 0.01, float),
-    "E": ("I", 0.01, float),
-    "L": ("i", 1.0e-7, float),
-    "d": ("d", None, float),
-    "M": ("b", None, int),
-    "q": ("q", None, long),  # Backward compat
-    "Q": ("Q", None, long),  # Backward compat
-    }
-
-
-class DFMessage(object):
-    def __init__(self, fmt, elements, apply_multiplier, parent):
-        self.fmt = fmt
-        self._elements = elements
-        self._apply_multiplier = apply_multiplier
-        self._fieldnames = fmt.columns
-        self._parent = parent
-
-    def to_dict(self):
-        d = {'mavpackettype': self.fmt.name}
-
-        for field in self._fieldnames:
-            d[field] = self.__getattr__(field)
-
-        return d
-
-    def __getattr__(self, field):
-        '''override field getter'''
-        try:
-            i = self.fmt.colhash[field]
-        except Exception:
-            raise AttributeError(field)
-        if self.fmt.msg_fmts[i] == 'Z' and self.fmt.name == 'FILE':
-            # special case for FILE contens as bytes
-            return self._elements[i]
-        if isinstance(self._elements[i], bytes):
-            try:
-                v = self._elements[i].decode("utf-8")
-            except UnicodeDecodeError:
-                # try western europe
-                v = self._elements[i].decode("ISO-8859-1")
-        else:
-            v = self._elements[i]
-        if self.fmt.format[i] == 'a':
-            pass
-        elif self.fmt.format[i] != 'M' or self._apply_multiplier:
-            v = self.fmt.msg_types[i](v)
-        if self.fmt.msg_types[i] == str:
-            v = null_term(v)
-        if self.fmt.msg_mults[i] is not None and self._apply_multiplier:
-            v *= self.fmt.msg_mults[i]
-        return v
-
-    def __setattr__(self, field, value):
-        '''override field setter'''
-        if not field[0].isupper() or not field in self.fmt.colhash:
-            super(DFMessage,self).__setattr__(field, value)
-        else:
-            i = self.fmt.colhash[field]
-            if self.fmt.msg_mults[i] is not None and self._apply_multiplier:
-                value /= self.fmt.msg_mults[i]
-            self._elements[i] = value
-
-    def get_type(self):
-        return self.fmt.name
-
-    def __str__(self):
-        is_py3 = sys.version_info >= (3,0)
-        ret = "%s {" % self.fmt.name
-        col_count = 0
-        for c in self.fmt.columns:
-            val = self.__getattr__(c)
-            if isinstance(val, float) and math.isnan(val):
-                # quiet nans have more non-zero values:
-                if is_py3:
-                    noisy_nan = bytearray([0x7f, 0xf8, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00])
-                else:
-                    noisy_nan = "\x7f\xf8\x00\x00\x00\x00\x00\x00"
-                if struct.pack(">d", val) != noisy_nan:
-                    val = "qnan"
-
-            if is_py3:
-                ret += "%s : %s, " % (c, val)
-            else:
-                try:
-                    ret += "%s : %s, " % (c, val)
-                except UnicodeDecodeError:
-                    ret += "%s : %s, " % (c, to_string(val))
-            col_count += 1
-        if col_count != 0:
-            ret = ret[:-2]
-        return ret + '}'
-
-    def get_msgbuf(self):
-        '''create a binary message buffer for a message'''
-        values = []
-        is_py2 = sys.version_info < (3,0)
-        for i in range(len(self.fmt.columns)):
-            if i >= len(self.fmt.msg_mults):
-                continue
-            mul = self.fmt.msg_mults[i]
-            name = self.fmt.columns[i]
-            if name == 'Mode' and 'ModeNum' in self.fmt.columns:
-                name = 'ModeNum'
-            v = self.__getattr__(name)
-
-            if isinstance(v,str):
-                try:
-                    v = bytes(v,'ascii')
-                except UnicodeEncodeError:
-                    v = v.encode()
-            elif isinstance(v, array.array):
-                v = v.tobytes()
-                
-            if mul is not None:
-                v /= mul
-                v = int(round(v))
-            values.append(v)
-
-        ret1 = struct.pack("BBB", 0xA3, 0x95, self.fmt.type)
-        try:
-            ret2 = struct.pack(self.fmt.msg_struct, *values)
-        except Exception as ex:
-            return None
-        return ret1 + ret2
-
-    def get_fieldnames(self):
-        return self._fieldnames
-
-    def __getitem__(self, key):
-        '''support indexing, allowing for multi-instance sensors in one message'''
-        if self.fmt.instance_field is None:
-            raise IndexError()
-        k = '%s[%s]' % (self.fmt.name, str(key))
-        if not k in self._parent.messages:
-            raise IndexError()
-        return self._parent.messages[k]

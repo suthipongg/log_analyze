@@ -2,8 +2,9 @@ import numpy as np
 import importlib
 
 
-ls_msg_from_type = {"battery" : ['AGRI', 'VIBE', 'RATE'], 
-                                 "gps" : ["ATT", "IMU"]}
+ls_msg_from_type = {"battery" : ["BAT"], 
+                    "vibration" : ["VIBE"],
+                    "gps" : ["GPS"]}
 
 
 class analyzer:

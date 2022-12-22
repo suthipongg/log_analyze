@@ -153,6 +153,22 @@ AP_MAV_TYPE_MODE_MAP_DEFAULT = {
     mavlink.MAV_TYPE_AIRSHIP: mode_mapping_blimp,
 }
 
+mainstate_mapping_px4 = {
+    0 : 'MANUAL',
+    1 : 'ALTCTL',
+    2 : 'POSCTL',
+    3 : 'AUTO_MISSION',
+    4 : 'AUTO_LOITER',
+    5 : 'AUTO_RTL',
+    6 : 'ACRO',
+    7 : 'OFFBOARD',
+    8 : 'STAB',
+    9 : 'RATTITUDE',
+    10 : 'AUTO_TAKEOFF',
+    11 : 'AUTO_LAND',
+    12 : 'AUTO_FOLLOW_TARGET',
+    13 : 'MAX',
+}
 
 try:
     # Allow for using custom mode maps by importing a JSON dict from
@@ -197,22 +213,6 @@ def mode_string_acm(mode_number):
     return "Mode(%u)" % mode_number
 
 
-mainstate_mapping_px4 = {
-    0 : 'MANUAL',
-    1 : 'ALTCTL',
-    2 : 'POSCTL',
-    3 : 'AUTO_MISSION',
-    4 : 'AUTO_LOITER',
-    5 : 'AUTO_RTL',
-    6 : 'ACRO',
-    7 : 'OFFBOARD',
-    8 : 'STAB',
-    9 : 'RATTITUDE',
-    10 : 'AUTO_TAKEOFF',
-    11 : 'AUTO_LAND',
-    12 : 'AUTO_FOLLOW_TARGET',
-    13 : 'MAX',
-}
 def mode_string_px4(MainState):
     return mainstate_mapping_px4.get(MainState, "Unknown")
 
@@ -225,6 +225,7 @@ def mode_mapping_bynumber(mav_type):
 def evaluate_expression(expression, vars):
     '''evaluation an expression'''
     return eval(expression, globals(), vars)
+
 
 def evaluate_condition(condition, vars):
     '''evaluation a conditional (boolean) statement'''

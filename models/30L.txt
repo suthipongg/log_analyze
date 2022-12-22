@@ -1,1 +1,3 @@
 battery
+vibration
+gps
