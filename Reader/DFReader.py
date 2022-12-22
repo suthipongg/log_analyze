@@ -405,16 +405,6 @@ class DFReader(object):
                 continue
             return m
 
-    def check_condition(self, condition):
-        '''check if a condition is true'''
-        return mavutil.evaluate_condition(condition, self.messages)
-
-    def param(self, name, default=None):
-        '''convenient function for returning an arbitrary MAVLink
-           parameter with a default'''
-        if name not in self.params:
-            return default
-        return self.params[name]
 
     def flightmode_list(self):
         '''return an array of tuples for all flightmodes in log. Tuple is (modestring, t0, t1)'''

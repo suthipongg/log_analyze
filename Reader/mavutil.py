@@ -1,8 +1,7 @@
 import os, json
-from . import mavexpression
+
 
 mavlink = None
-
 
 if not 'MAVLINK_DIALECT' in os.environ:
     os.environ['MAVLINK_DIALECT'] = 'ardupilotmega'
@@ -12,24 +11,13 @@ def set_dialect(dialect):
     For example, set_dialect("ardupilotmega")
     '''
     global mavlink, current_dialect
-    from . import mavparse
-    if 'MAVLINK20' in os.environ:
-        wire_protocol = mavparse.PROTOCOL_2_0
-        modname = "pymavlink.dialects.v20." + dialect
-    elif mavlink is None or mavlink.WIRE_PROTOCOL_VERSION == "1.0" or not 'MAVLINK09' in os.environ:
-        wire_protocol = mavparse.PROTOCOL_1_0
-        modname = "pymavlink.dialects.v10." + dialect
-    else:
-        wire_protocol = mavparse.PROTOCOL_0_9
-        modname = "pymavlink.dialects.v09." + dialect
 
-    try:
-        mod = __import__(modname)
-    except Exception:
-        # auto-generate the dialect module
-        from .mavgen import mavgen_python_dialect
-        mavgen_python_dialect(dialect, wire_protocol)
-        mod = __import__(modname)
+    if 'MAVLINK20' in os.environ:
+        modname = "Reader.dialects.v20." + dialect
+    elif mavlink is None or mavlink.WIRE_PROTOCOL_VERSION == "1.0" or not 'MAVLINK09' in os.environ:
+        modname = "Reader.dialects.v10." + dialect
+
+    mod = __import__(modname)
     components = modname.split('.')
     for comp in components[1:]:
         mod = getattr(mod, comp)
@@ -234,9 +222,9 @@ def mode_mapping_bynumber(mav_type):
     return AP_MAV_TYPE_MODE_MAP[mav_type] if mav_type in AP_MAV_TYPE_MODE_MAP else None
 
 
-def evaluate_expression(expression, vars, nocondition=False):
+def evaluate_expression(expression, vars):
     '''evaluation an expression'''
-    return mavexpression.evaluate_expression(expression, vars, nocondition)
+    return eval(expression, globals(), vars)
 
 def evaluate_condition(condition, vars):
     '''evaluation a conditional (boolean) statement'''
