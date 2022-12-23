@@ -215,6 +215,10 @@ class DFReaderClock_gps_interpolated(DFReaderClock):
         m._timestamp = self.timebase + count/rate
 
 
+def u_ord(c):
+	return ord(c) if sys.version_info.major < 3 else c
+
+
 def to_string(s):
     '''desperate attempt to convert a string regardless of what garbage we get'''
     try:
@@ -249,10 +253,6 @@ def null_term(str):
     if idx != -1:
         str = str[:idx]
     return str
-
-
-def u_ord(c):
-	return ord(c) if sys.version_info.major < 3 else c
 
 
 class DFMessage(object):
@@ -453,7 +453,6 @@ class DFFormat(object):
             self.instance_ofs = struct.calcsize(pre_sfmt)
             (ifmt,) = self.format[instance_idx]
             self.instance_len = struct.calcsize(ifmt)
-
 
     def set_mult_ids(self, mult_ids):
         '''set mult IDs string from FMTU'''

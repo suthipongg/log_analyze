@@ -2,11 +2,6 @@ import numpy as np
 import importlib
 
 
-ls_msg_from_type = {"battery" : ["BAT"], 
-                    "vibration" : ["VIBE"],
-                    "gps" : ["GPS"]}
-
-
 class analyzer:
     def pull_data(self, msg, column_name):
         col_index = []
@@ -20,4 +15,4 @@ class analyzer:
             mod = importlib.import_module("modules." + module)
             return mod.analyze(self)
         except: 
-            return module + " library not exist"
+            return module + ": library not exist"

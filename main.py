@@ -2,13 +2,13 @@ from pathlib import Path
 import argparse
 import numpy as np
 from Reader import DFReader
-import analyze
+from analyze import analyzer
+import modules._msgs_module as _msgs_module
 
 
-class read_binary(analyze.analyzer):
-    def __init__(self, path, modules_check):
+class read_binary:
+    def __init__(self, path):
         self.path = path
-        self.modules_check = modules_check
         self.mlog = DFReader.DFReader_binary(self.path)
         self.match_types = list(self.mlog.name_to_id.keys())
         self.match_types.sort()
@@ -18,11 +18,10 @@ class read_binary(analyze.analyzer):
         all_use_msgs = set()
         for module in self.modules_check:
             try:
-                msg = analyze.ls_msg_from_type[module]
+                msg = _msgs_module.ls_msg_from_modules[module]
+                all_use_msgs = all_use_msgs.union(set(msg))
             except:
                 print(module, "module not in dictionary module:messages")
-                
-            all_use_msgs = all_use_msgs.union(set(msg))
         return all_use_msgs
     
     def read_bin(self):
@@ -50,9 +49,10 @@ class read_binary(analyze.analyzer):
             self.dataframe[msg]['Values'] = np.array(self.dataframe[msg]['Values'])
 
 
-class check_type(read_binary):
+class check_type(analyzer, read_binary):
     def __init__(self, path, model="ALL"):
-        read_binary.__init__(self, path, type_model(model))
+        self.modules_check = type_model(model)
+        read_binary.__init__(self, path)
         self.read_bin()
 
     def show(self):
