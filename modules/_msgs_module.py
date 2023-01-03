@@ -1,3 +1,4 @@
-ls_msg_from_modules = {"battery" : ["BAT"], 
+ls_msg_from_modules = {"version" : ["PROF"],
+                       "battery" : ["BAT"], 
                        "vibration" : ["VIBE"],
                        "gps" : ["GPS"]}

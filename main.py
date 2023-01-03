@@ -4,6 +4,7 @@ import numpy as np
 from Reader import DFReader
 from analyze import analyzer
 import modules._msgs_module as _msgs_module
+import sys
 
 
 class read_binary:
@@ -32,38 +33,42 @@ class read_binary:
                 break
             
             timestamp = getattr(m, '_timestamp', 0.0)
-            data_timestamp = m.to_dict()
+            data = {'timestamp' : timestamp}
+            data.update(m.to_dict())
             m_type = m.get_type()
-            del data_timestamp['mavpackettype']
-            data_timestamp['timestamp'] = timestamp
+            del data['mavpackettype']
             
             if self.dataframe.get(m_type) == None:
-                self.dataframe[m_type] = {'Columns' : np.array(list(data_timestamp.keys())), 'Values' : [list(data_timestamp.values())]}
+                self.dataframe[m_type] = {'Columns' : np.array(list(data.keys())), 'Values' : [list(data.values())]}
             elif timestamp == last_timestamp:
-                self.dataframe[m_type]['Values'][-1] = list(data_timestamp.values())
+                self.dataframe[m_type]['Values'][-1] = list(data.values())
             else:
-                self.dataframe[m_type]['Values'].append(list(data_timestamp.values()))
+                self.dataframe[m_type]['Values'].append(list(data.values()))
             last_timestamp = timestamp
 
         for msg in self.dataframe.keys():
             self.dataframe[msg]['Values'] = np.array(self.dataframe[msg]['Values'])
 
 
-class check_type(analyzer, read_binary):
+class check_module(analyzer, read_binary):
     def __init__(self, path, model="ALL"):
-        self.modules_check = type_model(model)
+        if not path:
+            print("Please enter input path")
+            sys.exit()
+            
+        self.modules_check = extract_modules_from_model(model)
         read_binary.__init__(self, path)
         self.read_bin()
 
     def show(self):
         ls = []
-        for type in self.modules_check:
-            status_type = self.analyze_module(type)
-            ls.append(status_type)
-            print(status_type)
+        for module in self.modules_check:
+            status_module = self.analyze_module(module)
+            ls.append(status_module)
+            print(status_module)
 
 
-def type_model(model):
+def extract_modules_from_model(model):
     path = Path(__file__).resolve().parent / "models" / (model+".txt")
     with open(path, "r") as types:
         type = types.read().splitlines()
@@ -79,7 +84,7 @@ def parse_opt():
 
 
 def main(opt):
-    status = check_type(**vars(opt))
+    status = check_module(**vars(opt))
     status.show()
     
     
