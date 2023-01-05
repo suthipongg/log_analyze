@@ -12,7 +12,7 @@ class analyzer:
         values = self.dataframe[msg]['Values'][:, col_index]
         return values
     
-    def eliminate_data(self, msg, column_name, return_col=False):
+    def eliminate_data(self, msg, column_name=[], return_col=False):
         col_index = []
         columns = self.dataframe[msg]['Columns']
         del_col_index = []
