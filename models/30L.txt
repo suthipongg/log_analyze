@@ -1,3 +1,2 @@
 battery
 vibration
-gps
