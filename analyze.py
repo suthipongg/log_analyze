@@ -47,29 +47,26 @@ class analyzer:
         if timestamp_input == None:
             timestamp_index_input = self.find_column_index(msg_input, "timestamp")
             timestamp_input = self.dataframe[msg_input]["Values"][row_input, timestamp_index_input]
-        if type(msg_output) == str: 
-            msg_output = [msg_output]
-            
-        for msg in msg_output:
-            col_index = self.find_column_index(msg, column_output)
-            timestamp_index_output = self.find_column_index(msg, "timestamp")
-            timestamp_values_output = self.dataframe[msg]["Values"][:, timestamp_index_output]
-            bool_upper = timestamp_values_output > timestamp_input
-            upper = np.argmax(bool_upper)
-            
-            if np.sum(bool_upper) == 0:
-                values = self.dataframe[msg]['Values'][-1, col_index]
-            elif upper == 0 or method == "upper":
-                values = self.dataframe[msg]['Values'][upper, col_index]
-            elif method == "lower":
-                values = self.dataframe[msg]['Values'][upper-1, col_index]
-            elif method == "approximate":
-                delta_t = timestamp_values_output[upper] - timestamp_values_output[upper-1]
-                delta_values = self.dataframe[msg]['Values'][upper, col_index] - \
-                               self.dataframe[msg]['Values'][upper-1, col_index]
-                values = self.dataframe[msg]['Values'][upper, col_index] - \
-                         ((timestamp_values_output[upper] - timestamp_input)/delta_t * delta_values)
-            return values
+
+        col_index = self.find_column_index(msg_output, column_output)
+        timestamp_index_output = self.find_column_index(msg_output, "timestamp")
+        timestamp_values_output = self.dataframe[msg_output]["Values"][:, timestamp_index_output]
+        bool_upper = timestamp_values_output > timestamp_input
+        upper = np.argmax(bool_upper)
+        
+        if np.sum(bool_upper) == 0:
+            values = self.dataframe[msg_output]['Values'][-1, col_index]
+        elif upper == 0 or method == "upper":
+            values = self.dataframe[msg_output]['Values'][upper, col_index]
+        elif method == "lower":
+            values = self.dataframe[msg_output]['Values'][upper-1, col_index]
+        elif method == "approximate":
+            delta_t = timestamp_values_output[upper] - timestamp_values_output[upper-1]
+            delta_values = self.dataframe[msg_output]['Values'][upper, col_index] - \
+                            self.dataframe[msg_output]['Values'][upper-1, col_index]
+            values = self.dataframe[msg_output]['Values'][upper, col_index] - \
+                        ((timestamp_values_output[upper] - timestamp_input)/delta_t * delta_values)
+        return values
 
     def analyze_module(self, module):
         try:
