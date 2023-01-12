@@ -6,9 +6,6 @@ from analyze import analyzer
 import modules._msgs_module as _msgs_module
 import sys, os
 
-FILE = Path(__file__).resolve()
-ROOT = FILE.parents[0]
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))
 
 class read_binary:
     def __init__(self, path):
@@ -32,6 +29,7 @@ class read_binary:
     
     def read_bin(self):
         self.msgs = self.all_msgs()
+        
         while True:
             m = self.mlog.recv_match(type=self.msgs)
             if m is None:
@@ -39,11 +37,12 @@ class read_binary:
             
             timestamp = getattr(m, '_timestamp', 0.0)
             m_type = m.get_type()
+            data_no_time = m.to_dict()
+            del data_no_time['mavpackettype']
             data = {}
             if m_type != "FMT":
                 data = {'timestamp' : timestamp}
-            data.update(m.to_dict())
-            del data['mavpackettype']
+            data.update(data_no_time)
             
             if self.dataframe.get(m_type) == None:
                 self.dataframe[m_type] = {'Columns' : list(data.keys()), 
@@ -58,23 +57,42 @@ class read_binary:
             self.dataframe[msg]['Values'] = np.array(self.dataframe[msg]['Values'])
 
 
-class check_module(analyzer, read_binary):
+class function(analyzer, read_binary):
     def __init__(self, path, model="STD"):
         if not path:
             print("Please enter input path")
             sys.exit()
-        
-        path = Path(path)
-        self.modules_check = extract_modules_from_model(model)
-        read_binary.__init__(self, path)
-        self.read_bin()
 
-    def show(self):
+        self.path_file = Path(path)
+        self.modules_check = extract_modules_from_model(model)
+        
+        self.run()
+
+    def check_module(self):
         ls = []
         for module in self.modules_check:
             status_module = self.analyze_module(module)
             ls.append(status_module)
             print(status_module)
+
+    def read_log(self, path):
+        read_binary.__init__(self, path)
+        self.read_bin()
+            
+    def check_file_in_dir(self):
+        if os.path.isdir(self.path_file): 
+            list_bin = [self.path_file / f for f in os.listdir(self.path_file) 
+                        if f.split(".")[-1].lower() == "bin"]
+        else:
+            list_bin = [self.path_file]
+        return list_bin
+
+    def run(self):
+        list_bin = self.check_file_in_dir()
+        for file in list_bin:
+            print(f"====================={file.name}========================")
+            self.read_log(file)
+            self.check_module()
 
 
 def extract_modules_from_model(model):
@@ -93,8 +111,7 @@ def parse_opt():
 
 
 def main(opt):
-    status = check_module(**vars(opt))
-    status.show()
+    function(**vars(opt))
     
     
 if __name__ == "__main__":

@@ -11,7 +11,7 @@ def analyze(self):
     msg = data_msg[:, 1].flatten()
     ls_error = []
     for key in key_message:
-        error_msg = difflib.get_close_matches(key, msg, n=1, cutoff=0.4)
+        error_msg = difflib.get_close_matches(key, msg, n=1, cutoff=0.6)
         if error_msg == []:
             continue
         ls_error.append(error_msg[0])
