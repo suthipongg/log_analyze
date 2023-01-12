@@ -86,7 +86,7 @@ class function(analyzer, read_binary):
         self.analyzation = analyzation
         self.save_file_type = save_file_type
         self.all_msg = all_msg
-        self.path_out_file = path_out_file
+        self.path_out_file = Path(path_out_file)
         self.save_one_file = save_one_file
         self.log_file_name = ""
         
@@ -115,6 +115,7 @@ class function(analyzer, read_binary):
     def save_json(self):
         import json
         path = self.check_file_name(mkdir=True)
+        print(path, "================================================")
         for msg in self.dataframe.keys():
             data_msg = self.dataframe[msg]
             if self.analyzation:
