@@ -78,44 +78,49 @@ class function(analyzer, read_binary):
         
         self.path_file = Path(path)
         self.modules_check = extract_modules_from_model(model)
-        if not path_out_file:
-            if os.path.isdir(self.path_file): 
-                path_out_file = self.path_file
-            else:
-                path_out_file = self.path_file.parent
         self.analyzation = analyzation
         self.save_file_type = save_file_type
         self.all_msg = all_msg
+        if not path_out_file:
+            path_out_file = self.path_file.parent
         self.path_out_file = Path(path_out_file)
+        self.path_out_file_type = Path(path_out_file)
+        self.path_out_one_file = Path(path_out_file)
+        if os.path.isdir(self.path_file): 
+            if save_file_type:
+                create_dir_out = str(self.path_file.name) + "_" +  save_file_type
+                self.path_out_file_type = self.check_file_name(self.path_out_file, create_dir_out, mkdir=True)
+            if save_one_file:
+                create_dir_out = str(self.path_file.name) + "_one"
+                self.path_out_one_file = self.check_file_name(self.path_out_file, create_dir_out, mkdir=True)
         self.save_one_file = save_one_file
         self.log_file_name = ""
         
         self.run()
 
-    def check_file_name(self, ext="", mkdir=False):
+    def check_file_name(self, path_out, name, ext="", mkdir=False):
         extention = ""+ext
         n = 0
-        ls_dir = os.listdir(self.path_out_file)
+        ls_dir = os.listdir(path_out)
         while 1:
-            if self.log_file_name+extention in ls_dir:
+            if name+extention in ls_dir:
                 n += 1
                 extention = "_(" + str(n) + ")" + ext
             else:
-                name = self.log_file_name+extention
-                path = self.path_out_file / name
+                name_ext = name+extention
+                path = path_out / name_ext
                 if mkdir:
                     os.mkdir(path)
                 return path
 
     def save_in_one_file(self):
-        path = self.check_file_name(ext=".txt")
+        path = self.check_file_name(self.path_out_one_file, self.log_file_name, ext=".txt")
         with open(path, 'w') as outfile:
             outfile.write('\n'.join(self.data_one_file))
     
     def save_json(self):
         import json
-        path = self.check_file_name(mkdir=True)
-        print(path, "================================================")
+        path = self.check_file_name(self.path_out_file_type, self.log_file_name, mkdir=True)
         for msg in self.dataframe.keys():
             data_msg = self.dataframe[msg]
             if self.analyzation:
@@ -127,7 +132,7 @@ class function(analyzer, read_binary):
             
     def save_csv(self):
         import csv
-        path = self.check_file_name(mkdir=True)
+        path = self.check_file_name(self.path_out_file_type, self.log_file_name, mkdir=True)
         for msg in self.msgs:
             if self.dataframe.get(msg) == None: 
                 continue
@@ -165,17 +170,17 @@ class function(analyzer, read_binary):
             if self.analyzation:
                 self.check_module()
                 
+            self.log_file_name = file.stem
+            if self.save_one_file: 
+                self.save_in_one_file()
+                
             if self.save_file_type:
-                self.log_file_name = file.stem
                 if self.save_file_type == "csv":
                     self.save_csv()
                 elif self.save_file_type == "json":
                     self.save_json()
                 else:
-                    print(self.save_file_type, "file type not found")
-        
-            if self.save_one_file: 
-                self.save_in_one_file()
+                    print(self.save_file_type, "file type not found")    
 
 
 def extract_modules_from_model(model):
