@@ -90,13 +90,11 @@ class function(analyzer, read_binary):
     def run(self):
         list_bin = self.check_file_in_dir()
         dc_log = {}
-        if len(list_bin) == 1:
-            self.read_log(list_bin[0])
-            dc_log = self.check_module()
-        else:
-            for file in list_bin:
-                self.read_log(file)
-                dc_log[file.name] = self.check_module()
+        for file in list_bin:
+            self.read_log(file)
+            if len(list_bin) == 1:
+                dc_log = self.check_module()
+            dc_log[file.name] = self.check_module()
         return dc_log
 
 

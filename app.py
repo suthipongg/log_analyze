@@ -12,7 +12,7 @@ ROOT = Path(os.path.relpath(ROOT, Path.cwd()))
 app = Flask(__name__)
 UPLOAD_FOLDER = ROOT / 'static'
 
-if UPLOAD_FOLDER not in os.listdir(ROOT):
+if UPLOAD_FOLDER.name not in os.listdir(ROOT):
     os.makedirs(UPLOAD_FOLDER)
 
 app.secret_key = "secret key"
@@ -46,6 +46,7 @@ def upload():
             flash('============ ' + filename + ' ============')
             for msg in res:
                 flash(msg)
+            flash(' ')
             os.remove(app.config['UPLOAD_FOLDER'] / filename) 
         else:
             flash(f.filename + 'types not is - bin')
