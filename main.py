@@ -33,6 +33,8 @@ class read_binary:
         while True:
             m = self.mlog.recv_match(type=self.msgs)
             if m is None:
+                del self.mlog.data_map
+                self.mlog.filehandle.close()
                 break
             
             timestamp = getattr(m, '_timestamp', 0.0)
@@ -65,15 +67,13 @@ class function(analyzer, read_binary):
 
         self.path_file = Path(path)
         self.modules_check = extract_modules_from_model(model)
-        
-        self.run()
 
     def check_module(self):
         ls = []
         for module in self.modules_check:
             status_module = self.analyze_module(module)
             ls.append(status_module)
-            print(status_module)
+        return ls
 
     def read_log(self, path):
         read_binary.__init__(self, path)
@@ -89,10 +89,15 @@ class function(analyzer, read_binary):
 
     def run(self):
         list_bin = self.check_file_in_dir()
-        for file in list_bin:
-            print(f"====================={file.name}========================")
-            self.read_log(file)
-            self.check_module()
+        dc_log = {}
+        if len(list_bin) == 1:
+            self.read_log(list_bin[0])
+            dc_log = self.check_module()
+        else:
+            for file in list_bin:
+                self.read_log(file)
+                dc_log[file.name] = self.check_module()
+        return dc_log
 
 
 def extract_modules_from_model(model):
@@ -111,7 +116,9 @@ def parse_opt():
 
 
 def main(opt):
-    function(**vars(opt))
+    log_analyze = function(**vars(opt))
+    result = log_analyze.run()
+    print(result)
     
     
 if __name__ == "__main__":
