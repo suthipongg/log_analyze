@@ -94,7 +94,8 @@ class function(analyzer, read_binary):
             self.read_log(file)
             if len(list_bin) == 1:
                 dc_log = self.check_module()
-            dc_log[file.name] = self.check_module()
+            else:
+                dc_log[file.name] = self.check_module()
         return dc_log
 
 
