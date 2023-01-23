@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 from Reader import DFReader
 from analyze import analyzer
-import modules._msgs_module as _msgs_module
 import sys, os
+import importlib
 
 
 class read_binary:
@@ -20,8 +20,8 @@ class read_binary:
         all_use_msgs = set()
         for module in self.modules_check:
             try:
-                msg = _msgs_module.ls_msg_from_modules[module]
-                all_use_msgs = all_use_msgs.union(set(msg))
+                msg = importlib.import_module("modules." + module)
+                all_use_msgs = all_use_msgs.union(set(msg.msg))
             except Exception as e:
                 print(e)
                 print(module, "module not in dictionary module:messages")
@@ -117,7 +117,9 @@ def parse_opt():
 def main(opt):
     log_analyze = function(**vars(opt))
     result = log_analyze.run()
-    print(result)
+    for i in result:
+        for j in i:
+            print(j)
     
     
 if __name__ == "__main__":

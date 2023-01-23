@@ -3,8 +3,8 @@ import argparse
 import numpy as np
 from Reader import DFReader
 from analyze import analyzer
-import modules._msgs_module as _msgs_module
 import sys, os
+import importlib
 from datetime import datetime
 
 
@@ -22,8 +22,8 @@ class read_binary:
         all_use_msgs = set()
         for module in self.modules_check:
             try:
-                msg = _msgs_module.ls_msg_from_modules[module]
-                all_use_msgs = all_use_msgs.union(set(msg))
+                msg = importlib.import_module("modules." + module)
+                all_use_msgs = all_use_msgs.union(set(msg.msg))
             except Exception as e:
                 print(e)
                 print(module, "module not in dictionary module:messages")
@@ -172,7 +172,8 @@ class function(analyzer, read_binary):
             if self.analyzation:
                 if len(list_bin) == 1:
                     dc_log = self.check_module()
-                dc_log[file.name] = self.check_module()
+                else:
+                    dc_log[file.name] = self.check_module()
                 
             self.log_file_name = file.stem
             if self.save_one_file: 

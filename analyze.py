@@ -42,12 +42,7 @@ class analyzer:
         else: 
             return values
         
-    def link_value(self, msg_output, column_output, 
-                   timestamp_input=None, msg_input=None, row_input=None, method="approximate"):
-        if timestamp_input == None:
-            timestamp_index_input = self.find_column_index(msg_input, "timestamp")
-            timestamp_input = self.dataframe[msg_input]["Values"][row_input, timestamp_index_input]
-
+    def link_value(self, msg_output, column_output, timestamp_input, method="approximate"):
         col_index = self.find_column_index(msg_output, column_output)
         timestamp_index_output = self.find_column_index(msg_output, "timestamp")
         timestamp_values_output = self.dataframe[msg_output]["Values"][:, timestamp_index_output]
