@@ -3,3 +3,4 @@ message
 battery
 vibration
 gps
+flight_mode

@@ -118,6 +118,8 @@ def main(opt):
     log_analyze = function(**vars(opt))
     result = log_analyze.run()
     for i in result:
+        if type(i) == str:
+            i = [i]
         for j in i:
             print(j)
     

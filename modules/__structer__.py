@@ -4,7 +4,6 @@ msg = ["msg1", "msg2", ...]
 
 # analyze log finction (name function is "analyze" only and have only 1 argument is "self")
 def analyze(self):
-
     # create list that contain all necessary column for each message
     msg1_col = ["timestamp", "data", ...]
     msg2_col = ["col1", "col2", ...]
