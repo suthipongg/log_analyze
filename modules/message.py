@@ -24,5 +24,7 @@ def analyze(self):
         if error_msg == []:
             continue
         ls_error.append(error_msg[0])
-        
-    return ["_________________messagge_________________", f"data: {ls_error}"]
+    
+    dict_data = {"message" : ls_error}
+    
+    return dict_data

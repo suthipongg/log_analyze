@@ -22,9 +22,9 @@ def analyze(self):
     # use "link_value" function from analyze.py
     ctun_col = ["ThI", "Alt"]
     data_link_ctun = self.link_value("CTUN", ctun_col, data_bat[index_bat_max, 0])
-    print("____________test____________")
-    for col, data in zip(ctun_col, data_link_ctun):
-        print(col, data)
+    
+    dict_data = {"bat_max" : "maximum batterry : " + str(bat_max) + " Volt", 
+                 "bat_min" : "minimum batterry : " + str(bat_min) + " Volt", 
+                 'ctun_at_bat_max' : "ctun at maximum battery" + str(data_link_ctun)}
         
-    return ["_________________battery_________________", f"max: {bat_max:.2f} Volt",
-            f"min: {bat_min:.2f} Volt"]
+    return dict_data

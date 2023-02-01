@@ -12,7 +12,8 @@ def analyze(self):
     
     # write condition to check error for each message
     data_msg = data_msg[0]
-    result = ["_________________version_________________"]
+    dict_data = {}
     for n, col in enumerate(column_msg):
-        result += [col + ": " + str(data_msg[n])]
-    return result
+        dict_data[col] = data_msg[n]
+
+    return dict_data
