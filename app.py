@@ -2,7 +2,7 @@ from flask import Flask, flash, request, redirect, url_for, render_template
 import os
 from werkzeug.utils import secure_filename
 from pathlib import Path
-from main import function
+from main import main_log
 
 
 FILE = Path(__file__).resolve()
@@ -41,18 +41,15 @@ def upload():
             filename = secure_filename(f.filename)
             f.save(app.config['UPLOAD_FOLDER'] / filename)
 
-            log = function(model="ALL", path=app.config['UPLOAD_FOLDER'] / filename)
-            res = log.run()
-            flash('============ ' + filename + ' ============')
-            for msg in res:
-                for text in msg:
-                    flash(text)
-            flash(' ')
-            os.remove(app.config['UPLOAD_FOLDER'] / filename) 
         else:
             flash(f.filename + 'types not is - bin')
+    result = main_log(app.config['UPLOAD_FOLDER'], model="STD")
+    list_dir = os.listdir(app.config['UPLOAD_FOLDER'])
+    for file in list_dir:
+        os.remove(app.config['UPLOAD_FOLDER'] / file) 
+        
     if have_file:
-        return render_template('index.html', filename=filename)
+        return render_template('index.html', tables=[result.to_html(classes='data', header="true")])
     else:
         return redirect(request.url)
 

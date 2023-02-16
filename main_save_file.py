@@ -5,6 +5,7 @@ from Reader import DFReader
 from analyze import analyzer
 import sys, os
 import importlib
+import pandas as pd
 from datetime import datetime
 
 
@@ -77,7 +78,7 @@ class function(analyzer, read_binary):
         if not path:
             print("Please enter input path")
             sys.exit()
-        
+
         self.path_file = Path(path)
         self.modules_check = extract_modules_from_model(model)
         self.analyzation = analyzation
@@ -146,10 +147,10 @@ class function(analyzer, read_binary):
                 write.writerows(value)
 
     def check_module(self):
-        ls = []
+        ls = {}
         for module in self.modules_check:
             status_module = self.analyze_module(module)
-            ls.append(status_module)
+            ls[module] = status_module
         return ls
 
     def read_log(self, path):
@@ -170,10 +171,7 @@ class function(analyzer, read_binary):
         for file in list_bin:
             self.read_log(file)
             if self.analyzation:
-                if len(list_bin) == 1:
-                    dc_log = self.check_module()
-                else:
-                    dc_log[file.name] = self.check_module()
+                dc_log[file.name] = self.check_module()
                 
             self.log_file_name = file.stem
             if self.save_one_file: 
@@ -187,7 +185,7 @@ class function(analyzer, read_binary):
                 else:
                     print(self.save_file_type, "file type not found")    
         return dc_log
-    
+
 
 def extract_modules_from_model(model):
     path = Path(__file__).resolve().parent / "models" / (model+".txt")
@@ -209,12 +207,35 @@ def parse_opt():
     return opt
 
 
-def main(opt):
+def main_log(opt):
     log_analyze = function(**vars(opt))
     result = log_analyze.run()
-    print(result)
-    
-    
+    file_name = result.keys()
+    values = []
+    first = 0
+    for file in file_name:
+        if not first:
+            index_1_unique = result[file].keys()
+            index_1 = []
+            index_2 = []
+        val = []
+        for ind1 in index_1_unique:
+            if not first:
+                ind2 = list(result[file][ind1].keys())
+                index_1 += [ind1]*len(ind2)
+                index_2 += ind2
+            val += list(result[file][ind1].values())
+        first = 1
+        values.append(val)
+    values = np.array(values, dtype=object).T
+    df = pd.DataFrame(values, index=[index_1, index_2], columns=file_name)
+    return df
+
+
 if __name__ == "__main__":
     opt = parse_opt()
-    main(opt)
+    result = main_log(opt)
+    for col in result.columns:
+        print()
+        print(f"________________________________{col}________________________________")
+        print(result[col])

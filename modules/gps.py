@@ -1,3 +1,5 @@
+import numpy as np
+
 # create list that contain all necessary message in "msg" variable (name variable is "msg" only)
 msg = ["GPS"]
 
@@ -11,12 +13,22 @@ def analyze(self):
     data_gps = self.pull_data('GPS', gps_col)
     
     # write condition to check error for each message
-    HDop = (data_gps[:, 1] >= 0.8).any()
+    thresh_val = 0.8
+    HDop_check = data_gps[:, 1] >= thresh_val
+    HDop = HDop_check.any()
     
     if HDop: 
-        status_HDop = "error"
+        row = np.argmax(HDop_check)
+        status_HDop = "error "
+        sign = " >= "
     else: 
-        status_HDop = "ok"
+        row = np.argmax(data_gps[:, 1])
+        status_HDop = "ok "
+        sign = " < "
         
-    return ["_________________GPS_________________", f"HDop: {status_HDop}"]
+    Hdop_val = round(data_gps[row, 1], 2)
+        
+    dict_data = {"HDop" : status_HDop + ": max HDop value is " + str(Hdop_val) + sign + str(thresh_val)}
+    
+    return dict_data
     
