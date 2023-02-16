@@ -14,14 +14,14 @@ def analyze(self):
     
     # write condition to check error for each message
     index_bat_max = np.argmax(data_bat[:, 1])
-    bat_max = data_bat[index_bat_max, 1]
+    bat_max = round(data_bat[index_bat_max, 1], 2)
     index_bat_min = np.argmin(data_bat[:, 1])
-    bat_min = data_bat[index_bat_min, 1]
+    bat_min = round(data_bat[index_bat_min, 1], 2)
     
     # if require the value at the desired time from another message 
     # use "link_value" function from analyze.py
     ctun_col = ["ThI", "Alt"]
-    data_link_ctun = self.link_value("CTUN", ctun_col, data_bat[index_bat_max, 0])
+    data_link_ctun = np.round(self.link_value("CTUN", ctun_col, data_bat[index_bat_max, 0]), 2)
     
     dict_data = {"bat_max" : "maximum batterry : " + str(bat_max) + " Volt", 
                  "bat_min" : "minimum batterry : " + str(bat_min) + " Volt", 

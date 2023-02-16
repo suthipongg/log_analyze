@@ -7,6 +7,7 @@ import sys, os
 import importlib
 import pandas as pd
 
+
 class read_binary:
     def __init__(self, path):
         self.path = path
@@ -60,7 +61,7 @@ class read_binary:
 
 
 class function(analyzer, read_binary):
-    def __init__(self, path, model):
+    def __init__(self, path, model="STD"):
         if not path:
             print("Please enter input path")
             sys.exit()
@@ -93,10 +94,6 @@ class function(analyzer, read_binary):
         for file in list_bin:
             self.read_log(file)
             dc_log[file.name] = self.check_module()
-            # if len(list_bin) == 1:
-            #     dc_log = self.check_module()
-            # else:
-            #     dc_log[file.name] = self.check_module()
         return dc_log
 
 
@@ -115,8 +112,8 @@ def parse_opt():
     return opt
 
 
-def main(path, model="STD"):
-    log_analyze = function(path, model)
+def main(opt):
+    log_analyze = function(**vars(opt))
     result = log_analyze.run()
     file_name = result.keys()
     values = []
@@ -142,5 +139,8 @@ def main(path, model="STD"):
 
 if __name__ == "__main__":
     opt = parse_opt()
-    result = main(**vars(opt))
-    print(result)
+    result = main(opt)
+    for col in result.columns:
+        print()
+        print(f"________________________________{col}________________________________")
+        print(result[col])

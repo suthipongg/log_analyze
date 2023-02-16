@@ -32,7 +32,7 @@ def analyze(self):
         col = arg_max % 3
         status_X_Y_Z = "ok"
         sign_x_y_z = " < "
-    x_y_z_val = data_vibe[:, 1:4][row , col]
+    x_y_z_val = round(data_vibe[:, 1:4][row , col], 2)
     
     if clip_x_y_z:
         arg_max = np.argmax(clip_x_y_z_check)
@@ -46,7 +46,7 @@ def analyze(self):
         col = arg_max % 3
         status_clip_X_Y_Z = "ok"
         sign_clip_x_y_z = " <= "
-    clip_x_y_z_val = data_vibe[:, 4:][row , col]
+    clip_x_y_z_val = round(data_vibe[:, 4:][row , col], 2)
     
     dict_data = {"x_y_z" : status_X_Y_Z + ": max x_y_z is " + str(x_y_z_val) + sign_x_y_z + str(thresh_x_y_z_val),
                  "clip_x_y_z" : status_clip_X_Y_Z + ": max clip_x_y_z is " + str(clip_x_y_z_val) + sign_clip_x_y_z + str(thresh_clip_x_y_z_val)}

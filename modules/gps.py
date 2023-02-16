@@ -26,7 +26,7 @@ def analyze(self):
         status_HDop = "ok "
         sign = " < "
         
-    Hdop_val = data_gps[row, 1]
+    Hdop_val = round(data_gps[row, 1], 2)
         
     dict_data = {"HDop" : status_HDop + ": max HDop value is " + str(Hdop_val) + sign + str(thresh_val)}
     
