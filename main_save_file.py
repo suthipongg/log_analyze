@@ -73,8 +73,8 @@ class read_binary:
 
 
 class function(analyzer, read_binary):
-    def __init__(self, path, model="STD", analyzation=False,
-                 save_file_type=None, all_msg=False, path_out_file=None, save_one_file=False):
+    def __init__(self, path, model, analyzation,
+                 save_file_type, all_msg, path_out_file, save_one_file):
         if not path:
             print("Please enter input path")
             sys.exit()
@@ -207,8 +207,10 @@ def parse_opt():
     return opt
 
 
-def main(opt):
-    log_analyze = function(**vars(opt))
+def main_log(path, model="STD", analyzation=False,
+                 save_file_type=None, all_msg=False, path_out_file=None, save_one_file=False):
+    log_analyze = function(path, model, analyzation,
+                 save_file_type, all_msg, path_out_file, save_one_file)
     result = log_analyze.run()
     file_name = result.keys()
     values = []
@@ -234,7 +236,7 @@ def main(opt):
 
 if __name__ == "__main__":
     opt = parse_opt()
-    result = main(opt)
+    result = main_log(**vars(opt))
     for col in result.columns:
         print()
         print(f"________________________________{col}________________________________")
