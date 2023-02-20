@@ -7,7 +7,7 @@ import sys, os
 import importlib
 import pandas as pd
 
-
+# read log and return dataframe
 class read_binary:
     def __init__(self, path):
         self.path = path
@@ -16,7 +16,7 @@ class read_binary:
         self.match_types.sort()
         self.dataframe = {}
         self.msgs = []
-    
+    # return all message from all module in model
     def all_msgs(self):
         all_use_msgs = set()
         for module in self.modules_check:
@@ -30,7 +30,7 @@ class read_binary:
     
     def read_bin(self):
         self.msgs = self.all_msgs()
-        
+        # read log and gather data
         while True:
             m = self.mlog.recv_match(type=self.msgs)
             if m is None:
@@ -54,12 +54,12 @@ class read_binary:
                 self.dataframe[m_type]['Values'][-1] = list(data.values())
             else:
                 self.dataframe[m_type]['Values'].append(list(data.values()))
-        
+        # convert data from list to numpy array
         for msg in self.dataframe.keys():
             self.dataframe[msg]['Columns'] = np.array(self.dataframe[msg]['Columns'])
             self.dataframe[msg]['Values'] = np.array(self.dataframe[msg]['Values'])
 
-
+# function to get log data
 class function(analyzer, read_binary):
     def __init__(self, path, model):
         if not path:
@@ -68,18 +68,18 @@ class function(analyzer, read_binary):
 
         self.path_file = Path(path)
         self.modules_check = extract_modules_from_model(model)
-
+    # analyae all module in model
     def check_module(self):
         ls = {}
         for module in self.modules_check:
             status_module = self.analyze_module(module)
             ls[module] = status_module
         return ls
-
+    # call read log class
     def read_log(self, path):
         read_binary.__init__(self, path)
         self.read_bin()
-            
+    # return path all bin file
     def check_file_in_dir(self):
         if os.path.isdir(self.path_file): 
             list_bin = [self.path_file / f for f in os.listdir(self.path_file) 
@@ -87,7 +87,7 @@ class function(analyzer, read_binary):
         else:
             list_bin = [self.path_file]
         return list_bin
-
+    # pipeline for analyze log
     def run(self):
         list_bin = self.check_file_in_dir()
         dc_log = {}
@@ -96,14 +96,14 @@ class function(analyzer, read_binary):
             dc_log[file.name] = self.check_module()
         return dc_log
 
-
+# fetch all module in model
 def extract_modules_from_model(model):
     path = Path(__file__).resolve().parent / "models" / (model+".txt")
     with open(path, "r") as types:
         type = types.read().splitlines()
         return list(map(lambda type: type.lower(), type))
 
-
+# parse argument by command line
 def parse_opt():
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--path', type=str, help='path log file')
@@ -111,7 +111,7 @@ def parse_opt():
     opt = parser.parse_args()
     return opt
 
-
+# analyze and arrang output to pandas
 def main_log(path, model="STD"):
     log_analyze = function(path, model)
     result = log_analyze.run()
