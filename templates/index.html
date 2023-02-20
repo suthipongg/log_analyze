@@ -16,6 +16,13 @@
                 <input type="file" name="file" class="form-control" autocomplete="off" required multiple>
             </p>
         </dl>
+
+        <span class="input-group-addon">Please select model</span>
+          <select name="comp_select" class="selectpicker form-control">
+            {% for o in data %}
+            <option value="{{ o.name }}">{{ o.name }}</option>
+            {% endfor %}
+          </select>
         
         <p>
             <input type="submit" value="Submit" class="btn btn-info">

@@ -3,6 +3,7 @@ import importlib
 
 
 class analyzer:
+    # find column index that required
     def find_column_index(self, msg, column_name=None, not_in=False):
         columns = self.dataframe[msg]['Columns']
         if column_name == None or len(column_name) == 0:
@@ -22,7 +23,7 @@ class analyzer:
                     if not not_in:
                         col_index.append(n)
             return col_index
-                
+    # pull the required columns and message from dataframe       
     def pull_data(self, msg, column_name):
         col_index = []
         columns = self.dataframe[msg]['Columns']
@@ -31,7 +32,7 @@ class analyzer:
             col_index.append(index)
         values = self.dataframe[msg]['Values'][:, col_index]
         return values
-    
+    # pull the required message and eliminate unwanted columns from dataframe 
     def eliminate_data(self, msg, column_name=None, return_col=False):
         columns = self.dataframe[msg]['Columns']
         col_index = self.find_column_index(msg, column_name, not_in=True)   
@@ -41,7 +42,10 @@ class analyzer:
             return values, columns
         else: 
             return values
-        
+    # get value from another message that match with required timestamp
+    # approximate method is approximate link data to required timestamp
+    # upper method is select upper bound of link data at that timestamp
+    # lower method is select lower bound of link data at that timestamp
     def link_value(self, msg_output, column_output, timestamp_input, method="approximate"):
         col_index = self.find_column_index(msg_output, column_output)
         timestamp_index_output = self.find_column_index(msg_output, "timestamp")
@@ -62,7 +66,7 @@ class analyzer:
             values = self.dataframe[msg_output]['Values'][upper, col_index] - \
                         ((timestamp_values_output[upper] - timestamp_input)/delta_t * delta_values)
         return values
-
+    # analyze module
     def analyze_module(self, module):
         try:
             mod = importlib.import_module("modules." + module)
